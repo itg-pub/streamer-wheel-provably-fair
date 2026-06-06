@@ -1,0 +1,57 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: streamer-wheel-provably-fair
+  namespace: services
+spec:
+  releaseName: streamer-wheel-provably-fair
+  interval: 15m
+  chart:
+    spec:
+      chart: frontend
+      version: ">=1.0.0"
+      sourceRef:
+        kind: HelmRepository
+        name: itiger
+        namespace: flux-system
+  timeout: 5m
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    remediation:
+      retries: 3
+  values:
+    image:
+      repository: ghcr.io/itigercorp/streamer-wheel-provably-fair
+      tag: "1.0.0-rc.4" # {"$imagepolicy": "services:streamer-wheel-provably-fair:tag"}
+    deploy:
+      enable: true
+      suspend: false
+      env: stage
+      filterTags: '^[0-9]+\.[0-9]+\.[0-9]+-rc\.[0-9]+$' # только -rc теги
+      imagePolicy: ">=1.0.0-0" # только -rc теги
+    resources:
+      requests:
+        cpu: 30m
+        memory: 128Mi
+      limits:
+        cpu: 400m
+        memory: 256Mi
+    autoscaling:
+      enabled: true
+      minReplicas: 2
+      maxReplicas: 2
+      #    env:
+      #      - name: NEXT_API_URL_PROD
+      #        value: "http://internal.envoy-gateway-system.svc"
+    routing:
+      enabled: true
+      parentRefs:
+        - name: main
+          namespace: envoy-gateway-system
+          sectionName: https-swpf-tgrcas-org
+      matches:
+        - path:
+            type: PathPrefix
+            value: /
